@@ -1,0 +1,21 @@
+{
+  "id": 210,
+  "name": "Корм для кошек Purina One, индейка, 1,5 кг",
+  "mech": null,
+  "img_link": "https://media.5ka.ru/media/products/3455947.jpg",
+  "plu": 3455947,
+  "promo": {
+    "id": 1172068504,
+    "date_begin": "2021-03-30",
+    "date_end": "2021-04-05",
+    "type": "",
+    "description": "",
+    "kind": "Z001",
+    "expired_at": 5
+  },
+  "current_prices": {
+    "price_reg__min": 469.99,
+    "price_promo__min": 399.99
+  },
+  "store_name": null
+}
