@@ -35,7 +35,6 @@ class AutoyoulaSpider(scrapy.Spider):
             "url": response.url,
             "price": response.css("div.AdvertCard_price__3dDCr::text").get().replace("\u2009", " "),
             "description": response.css(f'{self._css_selectors["description"]}::text').get(),
-            #           "img_list": response.css(f'{self._css_selectors["img"]}::attr(src)').getall(),
             "img_list": AutoyoulaSpider.get_photos(response),
             "characteristics": [
                 {
