@@ -2,6 +2,7 @@ import scrapy
 import pymongo
 import re
 import base64
+import urllib
 
 
 class AutoyoulaSpider(scrapy.Spider):
@@ -34,9 +35,8 @@ class AutoyoulaSpider(scrapy.Spider):
             "url": response.url,
             "price": response.css("div.AdvertCard_price__3dDCr::text").get().replace("\u2009", " "),
             "description": response.css(f'{self._css_selectors["description"]}::text').get(),
-            "img_list": [
-                response.css(f'{self._css_selectors["img"]}::attr(src)').extract()
-            ],
+            #           "img_list": response.css(f'{self._css_selectors["img"]}::attr(src)').getall(),
+            "img_list": AutoyoulaSpider.get_photos(response),
             "characteristics": [
                 {
                     "name": itm.css(".AdvertSpecs_label__2JHnS::text").get(),
@@ -51,13 +51,41 @@ class AutoyoulaSpider(scrapy.Spider):
         self.db_client["autoyoula_parse"][self.name].insert_one(data)
 
     @staticmethod
+    def get_photos(response):
+        marker_photos = "window.transitState = decodeURIComponent"
+        for script in response.css("script"):
+            try:
+                if marker_photos in script.css("::text").get():
+                    re_pattern_photos = re.compile(r"%2Fdocument%2Fm%2F([a-zA-Z|\d\-%.]+)%22%2C%22isCatalog")
+                    result_photos = re.findall(re_pattern_photos, script.css("::text").get())
+                    img_list = []
+                    for img_url in result_photos:
+                        img_list.append(
+                            f"https://static.am/automobile_m3/document/l/{urllib.parse.unquote_plus(img_url)}")
+                    return (
+                        img_list
+                        if result_photos
+                        else None
+                    )
+            except TypeError:
+                pass
+
+    @staticmethod
     def get_author_id(response):
         marker = "window.transitState = decodeURIComponent"
         for script in response.css("script"):
             try:
-                if marker in script.css("::text").extract_first():
-                    re_pattern = re.compile(r"youlaId%22%2C%22([a-zA-Z|\d]+)%22%2C%22avatar")
-                    result = re.findall(re_pattern, script.css("::text").extract_first())
+                if marker in script.css("::text").get():
+                    re_pattern_users = re.compile(r"youlaId%22%2C%22([a-zA-Z|\d]+)%22%2C%22avatar")
+                    result = re.findall(re_pattern_users, script.css("::text").get())
+                    if not result:
+                        re_pattern_cardealers = re.compile(r"cardealers%2F([a-zA-Z|\d\-]+)%2F%23info")
+                        result_cardealers = re.findall(re_pattern_cardealers, script.css("::text").get())
+                        return (
+                            response.urljoin(f"/cardealers/{result_cardealers[0]}")
+                            if result_cardealers
+                            else None
+                        )
                     return (
                         response.urljoin(f"/user/{result[0]}").replace("auto.", "", 1)
                         if result
@@ -71,9 +99,9 @@ class AutoyoulaSpider(scrapy.Spider):
         marker_phone = "window.transitState = decodeURIComponent"
         for script in response.css("script"):
             try:
-                if marker_phone in script.css("::text").extract_first():
+                if marker_phone in script.css("::text").get():
                     re_pattern_phone = re.compile(r"phone%22%2C%22([a-zA-Z|\d]+)%3D%3D%22%2C%22time")
-                    result_phone = re.findall(re_pattern_phone, script.css("::text").extract_first())
+                    result_phone = re.findall(re_pattern_phone, script.css("::text").get())
                     return (
                         base64.b64decode(base64.b64decode(
                             base64.b64decode(base64.b64encode(result_phone[0].encode("ascii"))) + b'==')).decode(
