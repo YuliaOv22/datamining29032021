@@ -20,5 +20,8 @@ class HhParseMongoPipeline:
         self.db = client["hh_parse"]
 
     def process_item(self, item, spider):
-        self.db[spider.name].insert_one(item)
+        if "vacancy" in item["url"]:
+            self.db["vacancies"].insert_one(item)
+        else:
+            self.db["companies"].insert_one(item)
         return item

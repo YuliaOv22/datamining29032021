@@ -66,7 +66,7 @@ DEFAULT_REQUEST_HEADERS = {
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     'hh_parse.pipelines.HhParsePipeline': 100,
-    'hh_parse.pipelines.HhParseMongoPipeline': 200,
+    'hh_parse.pipelines.HhParseMongoPipeline': 200
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
