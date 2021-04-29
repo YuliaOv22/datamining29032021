@@ -24,14 +24,3 @@ class InstagramParseMongoPipeline:
     def process_item(self, item, spider):
         self.db[spider.name].insert_one(item)
         return item
-
-
-class InstagramImageDownloadPipeline(ImagesPipeline):
-    def get_media_requests(self, item, info):
-        if "photos" in item:
-            yield Request(item["photos"])
-
-    def item_completed(self, results, item, info):
-        if "photos" in item:
-            item["photos"] = [itm[1] for itm in results]
-        return item

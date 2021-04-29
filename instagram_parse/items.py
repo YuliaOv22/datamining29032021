@@ -14,14 +14,8 @@ class InstagramParseItem(scrapy.Item):
 
 class Instagram(scrapy.Item):
     _id = scrapy.Field()
-    date_parse = scrapy.Field()
-    data = scrapy.Field()
-    photos = scrapy.Field()
+    f_list = scrapy.Field()
 
 
-class InstagramTag(Instagram):
-    pass
-
-
-class InstagramPost(Instagram):
+class InstagramConnection(Instagram):
     pass

@@ -1,8 +1,7 @@
 import json
 import scrapy
-import datetime as dt
 from urllib.parse import urlencode
-from ..items import InstagramTag, InstagramPost
+from ..items import InstagramConnection
 
 
 class InstagramSpider(scrapy.Spider):
@@ -31,26 +30,25 @@ class InstagramSpider(scrapy.Spider):
         except AttributeError:
             if response.json()['authenticated']:
                 for user in self.users:
-                    yield response.follow(f"{user}/", callback=self.user_page_parse)
+                    yield response.follow(f"{self.start_urls[0]}{user}/", callback=self.user_page_parse)
 
     def user_page_parse(self, response):
         js_data = self.js_data_extract(response)
-        insta_tag = InstaTag(js_data["entry_data"]["TagPage"][0]["graphql"]["hashtag"])
-        yield insta_tag.get_tag_item()
-        yield from insta_tag.get_post_items()
-        yield response.follow(
-            f"{self.api_url}?{urlencode(insta_tag.paginate_params())}",
-            callback=self._api_tag_parse,
-        )
+        insta_user_id = InstaUser(js_data["entry_data"]["ProfilePage"][0]["graphql"]["user"])
+        yield response.follow(f"{self.api_url}?{urlencode(insta_user_id.paginate_params_followers)}",
+                              callback=self._api_followers_parse)
+        yield response.follow(f"{self.api_url}?{urlencode(insta_user_id.paginate_params_followings)}",
+                              callback=self._api_followings_parse)
 
-    def _api_tag_parse(self, response):
+    def _api_followers_parse(self, response):
         data = response.json()
-        insta_tag = InstaTag(data["data"]["hashtag"])
-        yield from insta_tag.get_post_items()
-        yield response.follow(
-            f"{self.api_url}?{urlencode(insta_tag.paginate_params())}",
-            callback=self._api_tag_parse,
-        )
+        followers = InstaUserConnections(data)
+        yield followers.get_followers()
+
+    def _api_followings_parse(self, response):
+        data = response.json()
+        followings = InstaUserConnections(data)
+        yield followings.get_followings()
 
     def js_data_extract(self, response):
         script = response.xpath(
@@ -59,38 +57,45 @@ class InstagramSpider(scrapy.Spider):
         return json.loads(script.replace("window._sharedData = ", "")[:-1])
 
 
-class InstaTag:
-    query_hash = "5aefa9893005572d237da5068082d8d5"
+class InstaUser:
+    query_hash_followers = "5aefa9893005572d237da5068082d8d5"
+    query_hash_followings = "3dec7e2c57367ef3da3d987d89f9dbc8"
 
-    def __init__(self, hashtag: dict):
-        self.variables = {
-            "tag_name": hashtag["name"],
-            "first": 50,
-            "after": hashtag["edge_hashtag_to_media"]["page_info"]["end_cursor"],
-        }
-        self.hashtag = hashtag
+    def __init__(self, user: dict):
+        self.variables = dict(id=user["id"], first=100)
+        self.user = user
 
-    def get_tag_item(self):
-        item = InstagramTag()
-        item["date_parse"] = dt.datetime.now()
-        data = {}
-        for key, value in self.hashtag.items():
-            if not (isinstance(value, dict) or isinstance(value, list)):
-                data[key] = value
-        item["data"] = data
-        return item
-
-    def paginate_params(self):
+    def paginate_params_followers(self):
         url_query = {
-            "query_hash": self.query_hash,
+            "query_hash": self.query_hash_followers,
             "variables": json.dumps(self.variables)
         }
         return url_query
 
-    def get_post_items(self):
-        for edge in self.hashtag["edge_hashtag_to_media"]["edges"]:
-            yield InstagramPost(
-                date_parse=dt.datetime.now(),
-                data=edge["node"],
-                photos=edge["node"]["display_url"]
-            )
+    def paginate_params_followings(self):
+        url_query = {
+            "query_hash": self.query_hash_followings,
+            "variables": json.dumps(self.variables)
+        }
+        return url_query
+
+
+class InstaUserConnections:
+    def __init__(self, data: dict):
+        self.data = data
+
+    def get_followers(self):
+        item = InstagramConnection()
+        followers = []
+        for usr in range(len(self.data["data"]["user"]["edge_followed_by"]["edges"])):
+            followers.append(self.data["data"]["user"]["edge_followed_by"]["edges"][usr]["node"]["username"])
+        item["f_list"] = followers
+        return item
+
+    def get_followings(self):
+        item = InstagramConnection()
+        followings = []
+        for usr in range(len(self.data["data"]["user"]["edge_follow"]["edges"])):
+            followings.append(self.data["data"]["user"]["edge_follow"]["edges"][usr]["node"]["username"])
+        item["f_list"] = followings
+        return item

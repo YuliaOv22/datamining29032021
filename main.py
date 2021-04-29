@@ -10,7 +10,7 @@ if __name__ == "__main__":
     crawler_settings = Settings()
     crawler_settings.setmodule("instagram_parse.settings")
     crawler_proc = CrawlerProcess(settings=crawler_settings)
-    users = ["juliaju_o", "andrew_churkin"]
+    users = ["andrew_churkin", "valeria.l.t"]
     crawler_proc.crawl(
         InstagramSpider,
         login=os.getenv("USERNAME"),
